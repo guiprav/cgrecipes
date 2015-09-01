@@ -146,15 +146,60 @@ void draw_quad()
     glEnd();
 }
 
+void bitblit(
+    void *target,
+    unsigned pixel_length,
+    unsigned target_width,
+    unsigned x,
+    unsigned y,
+    const void *source,
+    unsigned source_width,
+    unsigned source_height
+)
+{
+    unsigned source_row_length = source_width * pixel_length;
+    unsigned target_row_length = target_width * pixel_length;
+    unsigned x_offset = x * pixel_length;
+    unsigned y_offset = y * target_row_length;
+
+    unsigned i;
+
+    for(i = 0; i < source_height; ++i)
+    {
+        memcpy(
+            (char *)(target) + x_offset + y_offset + (target_row_length * i),
+            (const char *)(source) + (source_row_length * i),
+            target_row_length
+        );
+    }
+}
+
 void gl_render_glyph()
 {
+    unsigned texture_width = 128;
+    unsigned texture_height = texture_width;
+    unsigned texture_size = texture_width * texture_height;
+
+    char *texture_buffer;
+
     FT_Bitmap *bitmap = &face->glyph->bitmap;
 
-    unsigned width = bitmap->width;
-    unsigned height = bitmap->rows;
-    const void *pixels = bitmap->buffer;
+    unsigned glyph_width = bitmap->width;
+    unsigned glyph_height = bitmap->rows;
 
     unsigned texture_id;
+
+    texture_buffer = malloc(texture_size);
+    memset(texture_buffer, 0, texture_size);
+
+    bitblit(
+        texture_buffer,
+        1, texture_width,
+        0, 0,
+        bitmap->buffer,
+        glyph_width,
+        glyph_height
+    );
 
     glGenTextures(1, &texture_id);
     abort_on_error("OpenGL", glGetError());
@@ -165,15 +210,17 @@ void gl_render_glyph()
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_RGBA,
-        width,
-        height,
+        GL_RED,
+        texture_width,
+        texture_height,
         0,
-        GL_RGBA,
+        GL_RED,
         GL_UNSIGNED_BYTE,
-        pixels
+        texture_buffer
     );
     abort_on_error("OpenGL", glGetError());
+
+    free(texture_buffer);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     abort_on_error("OpenGL", glGetError());
