@@ -148,29 +148,23 @@ void draw_quad()
 
 void bitblit(
     void *target,
-    unsigned pixel_length,
     unsigned target_width,
-    unsigned x,
-    unsigned y,
     const void *source,
     unsigned source_width,
-    unsigned source_height
+    unsigned source_height,
+    unsigned x,
+    unsigned y
 )
 {
-    unsigned source_row_length = source_width * pixel_length;
-    unsigned target_row_length = target_width * pixel_length;
-    unsigned x_offset = x * pixel_length;
-    unsigned y_offset = y * target_row_length;
-
     unsigned i;
+
+    target = (char *)(target) + (target_width * y) + x;
 
     for(i = 0; i < source_height; ++i)
     {
-        memcpy(
-            (char *)(target) + x_offset + y_offset + (target_row_length * i),
-            (const char *)(source) + (source_row_length * i),
-            target_row_length
-        );
+        memcpy(target, source, source_width);
+        target = (char *)(target) + target_width;
+        source = (const char *)(source) + source_width;
     }
 }
 
@@ -194,11 +188,11 @@ void gl_render_glyph()
 
     bitblit(
         texture_buffer,
-        1, texture_width,
-        0, 0,
+        texture_width,
         bitmap->buffer,
         glyph_width,
-        glyph_height
+        glyph_height,
+        0, 0
     );
 
     glGenTextures(1, &texture_id);
